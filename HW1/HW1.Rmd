@@ -1,0 +1,172 @@
+---
+title: "W1_HW"
+author: "110078509"
+date: "2022/2/17"
+output:
+  html_document:
+    df_print: paged
+---
+```{r}
+rm(list=ls()) #remove the random variable to fresh the working environment
+ls() #suppose to be nothing 'character(0)'
+
+```
+
+```{r}
+# import raw data as data.df
+
+#set the working directory path first
+getwd() #current wd"C:/Users/LeoShr/p_space/NTHU/BACS/W1" 
+txt_wd <- paste(getwd(), '/customers.txt',sep = "" );txt_wd
+
+data.df <- read.table(txt_wd,
+                          header = TRUE,
+                          row.names = NULL,
+                         )
+```
+```{r}
+#peap the dataframe we got
+str(data.df)
+```
+
+```{r}
+attach(data.df)
+```
+I attached the data.df for Q1-Q6 cuz I am lazy to specify the dataframe I used. Kindly run my code from top to bottom with order. 
+
+
+#Q1. What is the 5th element in the original list of ages?
+```{r}
+ans1 <-age[5]; ans1 #45
+
+```
+
+#2. What is the fifth lowest age?
+
+
+```{r}
+unique(sort(age))[5] #22
+
+```
+*Explain:* sort the vector then remove the duplicate data via unique
+
+
+Q3.  Extract the five lowest ages together
+
+```{r}
+
+head(unique(sort(age)),5)
+#ans: [1] 18 19 20 21 22
+```
+*Explain:* use sort to get the ascending data then get the first 5 via 'head'
+
+
+Q4. Get the five highest ages by first sorting them in decreasing order first.
+
+```{r}
+head(unique(sort(age, decreasing = TRUE)), 5)
+# ans : [1] 85 83 82 81 80
+
+```
+*Explain:*same concept with the Q3 but with parameter setting as decreasing. That how we got the five highest ages.
+
+
+Q5. What is the average (mean) age?
+
+```{r}
+mean(age)
+# ans : [1] 46.80702
+```
+*Explain:* Get average value of numeric data via mean()
+
+
+
+Q6. What is the standard deviation of ages? 
+(guess or google the standard deviation function in R)
+
+```{r}
+sd(age)
+detach(data.df)#I detach the data frame here
+```
+*Explain:* sd means Standard Deviation. 
+
+
+Q7. Make a new variable called age_diff, with the difference between each age and the mean age
+
+```{r}
+require("dplyr")
+data_2factor<- data.df;#to maintain the raw data unchanged
+data_2factor  <- mutate(data_2factor, age_diff = age - mean(age) )
+str(data_2factor)#show  the result here
+
+```
+*Explain:* 
+1. i detached the raw df first because we're gonna to mutate the variable with additional column called age_diff
+2. Using mutate function 
+3. show  the result here via str()
+
+
+
+Q8. What is the average “difference between each age and the mean age”?
+
+*Explain:* 
+ 
+HINT: think carefully why someone would want to know this, and what it implies about how to do #6
+
+
+```{r}
+mean(abs(data_2factor$age_diff)) 
+```
+```{r}
+mean(data_2factor$age_diff)
+```
+
+This question required to follow the mind set of Q6, which is Standard Deviation. The Standard Deviation is the average distance form the mean, therefore, we should use absolute to represent distance in math.
+
+
+Q9. Visualize the raw data as we did in class: (a) histogram, (b) density plot, (c) boxplot+stripchart
+
+(a) histogram
+```{r}
+require('ggplot2')
+
+```
+
+```{r}
+data_2factor %>% #pipeline
+    ggplot( aes(x = age)) +
+    geom_histogram()
+```
+*Explain:*
+
+Using ggplot with geom_histogram()
+
+(b) density plot
+```{r}
+data_2factor  %>%
+ggplot( aes(x=age)) +
+    geom_density(fill="#69b3a2", color="#e9ecef", alpha=0.8)+
+    #fill the distribution region with color
+    # Note: alpha for transparent level
+    ggtitle("Density plot of Age") + #add the title of chart
+    xlab('Age')+ #x axis label
+    ylab('Density') #y  label
+
+```
+*Explain:*
+Using ggplot with geom_density(). 
+
+
+(c) boxplot+stripchart
+```{r}
+data_2factor %>%
+    ggplot(aes(x = "", y = age)) + 
+    geom_boxplot() +
+    geom_jitter()+
+    #The reason of adoption of geom_jitter is for better      #visualization performance. I made them overlapped.
+    ggtitle("Boxplot+Stripchart")+
+    xlab('') #remove the x lab
+
+```
+*Explain:*
+As the graph shows, 50% of the data point located in the range if IQR (Q3-Q1)
