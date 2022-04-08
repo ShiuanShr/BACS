@@ -1,0 +1,412 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={HW},
+  pdfauthor={110078509},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{HW}
+\author{110078509}
+\date{20220319}
+
+\begin{document}
+\maketitle
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{question-1}{%
+\subsubsection{Question 1}\label{question-1}}
+
+\begin{longtable}[]{@{}l@{}}
+\toprule
+\endhead
+i. Would this scenario create systematic or random error (or both or
+neither)? \\
+ii. Which part of the t-statistic or significance (diff, sd, n, alpha)
+would be affected? \\
+iii. Will it increase or decrease our power to reject the null
+hypothesis? \\
+iv. Which kind of error (Type I or Type II) becomes more likely because
+of this scenario? \\
+\bottomrule
+\end{longtable}
+
+\hypertarget{a.}{%
+\paragraph{a.}\label{a.}}
+
+You discover that your colleague wanted to target the general population
+of Taiwanese users of the product. However, he only collected data from
+a pool of young consumers, and missed many older customers who you
+suspect might use the product much less every day.
+
+\hypertarget{i.-systematic-error}{%
+\subsection{\texorpdfstring{\#\#\#\#\# i. \emph{systematic
+error}}{\#\#\#\#\# i. systematic error}}\label{i.-systematic-error}}
+
+\hypertarget{ii.-sd-diff-n-are-affected.}{%
+\subparagraph{\texorpdfstring{ii. \emph{sd, diff, n are
+affected.}}{ii. sd, diff, n are affected.}}\label{ii.-sd-diff-n-are-affected.}}
+
+\emph{Explains:}
+
+Because we missed many older customers. Therefore, the alternative
+distribution we obtained is too narrow compared to the real one. Hence,
+the sd is affected.
+
+And the sample size we got is fewer than it shall be if we want to
+maintain a randomized selected sample assumption. Hence, n is affected.
+
+The diff is ( x mean -μο), in this scenario, the x means is not accurate
+anymore, because we missed plenty of samples lower than the average.
+Hence the diff is affected also.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 0\tabcolsep) * \real{1.00}}@{}}
+\toprule
+\endhead
+\#\#\#\#\# iii. It decreases our power to reject the null hypothesis. \\
+\emph{Explains:} \\
+Manipulate the sliding window to figure out. \\
+\bottomrule
+\end{longtable}
+
+\hypertarget{iv.-typeii-error}{%
+\subparagraph{iv. TypeII error}\label{iv.-typeii-error}}
+
+\emph{Explains:}
+
+It also called false negative. The data of elder people should be
+considered in, however, they are not.Therefore, it Type II error.
+------------------------------------------------------------------------------------------------
+
+\hypertarget{b.you-find-that-20-of-the-respondents-are-reporting-data-from-the-wrong-wearable-device-so-they-should-be-removed-from-the-data.-these-20-people-are-just-like-the-others-in-every-other-respect.}{%
+\paragraph{b.You find that 20 of the respondents are reporting data from
+the wrong wearable device, so they should be removed from the data.
+These 20 people are just like the others in every other
+respect.}\label{b.you-find-that-20-of-the-respondents-are-reporting-data-from-the-wrong-wearable-device-so-they-should-be-removed-from-the-data.-these-20-people-are-just-like-the-others-in-every-other-respect.}}
+
+\hypertarget{i.-random-error}{%
+\subsection{\texorpdfstring{\#\#\#\#\# i. \emph{random
+error}}{\#\#\#\#\# i. random error}}\label{i.-random-error}}
+
+\hypertarget{ii.-n-would-be-lower.}{%
+\subparagraph{\texorpdfstring{ii. \emph{n would be lower.
+}}{ii. n would be lower. }}\label{ii.-n-would-be-lower.}}
+
+\emph{Explains:}
+
+\hypertarget{because-these-noisy-data-shall-not-be-considered-in.}{%
+\subsection{Because these noisy data shall not be considered
+in.}\label{because-these-noisy-data-shall-not-be-considered-in.}}
+
+\hypertarget{iii.-it-decrease-the-power-to-reject-the-null-hypothesis}{%
+\subparagraph{\texorpdfstring{iii. \emph{It decrease the power to reject
+the null
+hypothesis}}{iii. It decrease the power to reject the null hypothesis}}\label{iii.-it-decrease-the-power-to-reject-the-null-hypothesis}}
+
+\emph{Reason:}
+
+\hypertarget{manipulate-the-sliding-window-to-figure-out.}{%
+\subsection{Manipulate the sliding window to figure
+out.}\label{manipulate-the-sliding-window-to-figure-out.}}
+
+\hypertarget{iv.-type-i-error}{%
+\subparagraph{\texorpdfstring{iv. \emph{Type I
+Error}}{iv. Type I Error}}\label{iv.-type-i-error}}
+
+\emph{Explains:}
+
+\hypertarget{it-also-called-false-positive.-in-this-scenario-we-considered-the-error-into-our-analysis-however-we-shall-not.-therefore-it-false-positive.}{%
+\subsection{It also called false positive. In this scenario, we
+considered the error into our analysis, however, we shall not.
+Therefore, it false
+positive.}\label{it-also-called-false-positive.-in-this-scenario-we-considered-the-error-into-our-analysis-however-we-shall-not.-therefore-it-false-positive.}}
+
+\hypertarget{c.-a-very-annoying-professor-visiting-your-company-has-criticized-your-colleagues-95-confidence-criteria-and-has-suggested-relaxing-it-to-just-90.}{%
+\paragraph{c.~A very annoying professor visiting your company has
+criticized your colleague's ``95\% confidence'' criteria, and has
+suggested relaxing it to just
+90\%.}\label{c.-a-very-annoying-professor-visiting-your-company-has-criticized-your-colleagues-95-confidence-criteria-and-has-suggested-relaxing-it-to-just-90.}}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{i.-neither.}{%
+\subparagraph{\texorpdfstring{i.
+\emph{neither.}}{i. neither.}}\label{i.-neither.}}
+
+\emph{Explains:}
+
+\hypertarget{it-just-the-change-of-the-confidence-level-based-on-the-professors-suggestion.}{%
+\subsection{It just the change of the confidence level based on the
+professor's
+suggestion.}\label{it-just-the-change-of-the-confidence-level-based-on-the-professors-suggestion.}}
+
+\hypertarget{ii.-alpha}{%
+\subparagraph{\texorpdfstring{ii.
+\emph{alpha}}{ii. alpha}}\label{ii.-alpha}}
+
+\emph{Explains:}
+
+\hypertarget{from-0.05-to-0.1}{%
+\subsection{From 0.05 to 0.1}\label{from-0.05-to-0.1}}
+
+\hypertarget{iii.-increase-the-power-to-reject-the-null-hypothesis.}{%
+\subparagraph{\texorpdfstring{iii. \emph{Increase the power to reject
+the null
+hypothesis.}}{iii. Increase the power to reject the null hypothesis.}}\label{iii.-increase-the-power-to-reject-the-null-hypothesis.}}
+
+\emph{Explains:}
+
+\hypertarget{because-the-critical-point-of-the-right-tail-shifted-leftward.}{%
+\subsection{Because the critical point of the right tail shifted
+leftward.}\label{because-the-critical-point-of-the-right-tail-shifted-leftward.}}
+
+\hypertarget{iv.-type-i}{%
+\subparagraph{\texorpdfstring{iv. \emph{Type
+I}}{iv. Type I}}\label{iv.-type-i}}
+
+\emph{Explains:} Type 1 errors has a probability of ``α'' correlated to
+the level of confidence we set. Originally, 95\% confidence level means
+that there is a 5\% chance of getting a type I error. According to the
+suggestion, we set the confidence level to 90\% , the chance of getting
+a type 1 error increase (10\%).
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{d.-your-colleague-has-measured-usage-times-on-five-weekdays-and-taken-a-daily-average.-but-you-feel-this-will-underreport-usage-for-younger-people-who-are-very-active-on-weekends-whereas-it-over-reports-usage-of-older-users.}{%
+\paragraph{d.~Your colleague has measured usage times on five weekdays
+and taken a daily average. But you feel this will underreport usage for
+younger people who are very active on weekends, whereas it over-reports
+usage of older
+users.}\label{d.-your-colleague-has-measured-usage-times-on-five-weekdays-and-taken-a-daily-average.-but-you-feel-this-will-underreport-usage-for-younger-people-who-are-very-active-on-weekends-whereas-it-over-reports-usage-of-older-users.}}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{i.-systematic-error-1}{%
+\subsection{\texorpdfstring{\#\#\#\#\# i. \emph{systematic
+error}}{\#\#\#\#\# i. systematic error}}\label{i.-systematic-error-1}}
+
+\hypertarget{ii.diff-and-mean-will-be-affected.}{%
+\subparagraph{\texorpdfstring{ii.\emph{diff and mean will be
+affected.}}{ii.diff and mean will be affected.}}\label{ii.diff-and-mean-will-be-affected.}}
+
+\emph{Explains:} Because the population means we want to inference
+includes the user behavior from Monday to Sunday. If we only choose the
+workday data as our sample, we will overemphasize the behavior of elder
+users and neglect the younger people who are very active on weekends.
+Therefore, the mean sample mean is underestimated. According to the
+formula of diff(mean - mu 0), as the mean is affected and the mu0 is
+still, the diff would be affected for sure.
+----------------------------------
+
+\hypertarget{iii.-it-decrease-our-power-to-reject-the-null-hypothesis.}{%
+\subparagraph{\texorpdfstring{iii. \emph{it decrease our power to reject
+the null
+hypothesis.}}{iii. it decrease our power to reject the null hypothesis.}}\label{iii.-it-decrease-our-power-to-reject-the-null-hypothesis.}}
+
+\emph{Reason:} \emph{Explains:} H0 :the mean usage time of the new
+smartwatch is the same or less than for the previous smartwatch.
+
+H alt :The mean usage time is greater than that of our previous
+smartwatch.
+
+And this error results in underestimating frequent users among the
+young. Therefore, it makes us harder to reject H0, which decreases the
+power to reject the null hypothesis.
+
+\hypertarget{iv.-type-ii}{%
+\subparagraph{\texorpdfstring{iv. \emph{Type
+II}}{iv. Type II}}\label{iv.-type-ii}}
+
+\emph{Explains:} Because we should count weekend users in, but we don't.
+And false negative means that we should consider specific targets is
+negative, but it doesn't.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\emph{Explains:}
+
+\hypertarget{section}{%
+\subparagraph{}\label{section}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{verizon }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"verizon.csv"}\NormalTok{)}
+\NormalTok{time }\OtherTok{\textless{}{-}}\NormalTok{ verizon}\SpecialCharTok{$}\NormalTok{Time}
+\end{Highlighting}
+\end{Shaded}
+
+\emph{Ans:}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-1}{%
+\paragraph{}\label{section-1}}
+
+\emph{Ans:}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-2}{%
+\paragraph{}\label{section-2}}
+
+\emph{Ans:}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-3}{%
+\subparagraph{}\label{section-3}}
+
+\emph{Ans:}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-4}{%
+\paragraph{}\label{section-4}}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-5}{%
+\subparagraph{}\label{section-5}}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-6}{%
+\subparagraph{}\label{section-6}}
+
+\emph{Ans}:
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-7}{%
+\subparagraph{}\label{section-7}}
+
+\emph{Ans: }
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-8}{%
+\subparagraph{}\label{section-8}}
+
+\emph{Explain:}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{section-9}{%
+\subparagraph{}\label{section-9}}
+
+\emph{Ans. }
+
+\end{document}
