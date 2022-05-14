@@ -1,0 +1,410 @@
+---
+title: "HW11"
+author: '110078509'
+date: '20220430'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+```{r setup, include=FALSE} 
+#rm(list=ls()) 
+knitr::opts_chunk$set(echo = TRUE) 
+library(tidyverse) 
+library(ggplot2) 
+library("gridExtra")
+library(car)
+#remove the random variable to fresh the working environment 
+auto <- read.table("auto-data.txt", header=FALSE, na.strings = "?")
+names(auto) <- c("mpg", "cylinders", "displacement", "horsepower", "weight", 
+                 "acceleration", "model_year", "origin", "car_name")
+auto$origin <-as.factor(auto$origin)
+auto<-na.omit(auto)
+
+
+attach(auto)
+cars_log <- with(cars, data.frame(log(mpg), log(cylinders), log(displacement), 
+                                  log(horsepower), log(weight), log(acceleration), 
+                                  model_year, origin))
+detach(auto)
+```
+#### Preface
+
+Let's see the coefficienct of the "un-transform" data. We can tell that cylinders, horsepower , acceleration  are not significant to mpg.  
+
+
+```{r}
+summary(lm(mpg ~ cylinders+displacement+horsepower+weight+acceleration+model_year+origin, data = auto))
+```
+
+#### a. Run a new regression on the cars_log dataset, with mpg.log. dependent on all other variables
+
+
+```{r}
+summary(lm(log.mpg. ~ log.cylinders.+log.displacement.+ log.horsepower. +log.weight.+log.acceleration.+model_year+origin, data = cars_log))
+
+```
+
+
+#### ai. Which log-transformed factors have a significant effect on log.mpg. at 10% significance?
+
+- Ans: 
+
+log.horsepower., log.weight., log.acceleration., model_year, origin2 , origin3  
+
+
+#### aii. Do some new factors now have effects on mpg, and why might this be?
+
+
+
+- Ans: 
+
+Yes. Compared to the coefficient of the original dataset, "log.horsepower.","log.acceleration." become significant.
+Because they had multicollinearity with feature-weight,  however, the "weight" had higer correlation to the mpg.
+Therefore, the linear model gave all the credit to the weight.
+After transformation, the log function make the model fit the transformed dataset better. To prove it, the graph as bleow:
+
+```{r}
+
+before_log <- auto %>% ggplot( aes(x = horsepower, y =mpg)) + 
+    geom_smooth(method = "lm", se = TRUE, colour="red", size=1)  +
+    geom_point(aes(color = acceleration)) + 
+    ggtitle('Before Log Transform')
+
+after_log <- cars_log %>% ggplot(aes(x = log.horsepower., y =log.mpg.)) + 
+    geom_smooth(method = "lm", se = TRUE, colour="red", size=1)  +
+    geom_point(aes(color = log.acceleration.))+ 
+    ggtitle('After Log Transform')
+
+grid.arrange(before_log, after_log,ncol = 2, nrow = 1)
+```
+
+
+#### aiii. Which factors still have insignificant or opposite (from correlation) effects on mpg? 
+Why might this be?
+
+log.cylinders.
+The purpose of the log transformation is to greatly reduce the extremely high value and slightly reduce the small value.
+In my opinion, the cylinder feature indicates the number of the cylinders from 1 to 8. After log transformation, these made no big difference and can't help the model improve in these case.
+
+Here is one simulation using 100 sample form the real dataset for better clarification to the idea.
+
+
+```{r}
+set.seed(110078509)
+simulation <- auto[1:2]
+
+random_sample <- simulation[sample(nrow(simulation), 100), ]
+
+log.random_sample <- random_sample %>% 
+    mutate(log.mpg. = log(mpg)) %>%
+     mutate(log.cylinders. = log(cylinders))
+
+
+before_log <- random_sample %>% ggplot( aes(x = cylinders, y =mpg)) + 
+    geom_smooth(method = "lm", se = TRUE, colour="red", size=1) + 
+    ggtitle('Before Log Transform')
+
+after_log <- log.random_sample %>% ggplot(aes(x = log.cylinders., y =log.mpg.)) + 
+    geom_smooth(method = "lm", se = TRUE, colour="red", size=1)  +
+    ggtitle('After Log Transform')
+
+grid.arrange(before_log, after_log,ncol = 2, nrow = 1)
+```
+You can tell that it make no difference after the log transformation. Therefore, it still have insignificant correlation on mpg. 
+
+
+
+#### b. Let’s take a closer look at weight, because it seems to be a major explanation of mpg
+
+```{r}
+
+summary(lm(mpg~weight, data = auto))
+```
+
+#### bi. Create a regression (call it regr_wt) of mpg over weight from the original cars dataset
+
+```{r}
+regr_wt  <- lm(mpg~weight, data = auto)
+summary(regr_wt)
+```
+
+#### bii. Create a regression (call it regr_wt_log) of log.mpg. on log.weight. from cars_log
+
+```{r}
+
+regr_wt_log <- lm(log.mpg. ~log.weight., data = cars_log)
+summary(regr_wt_log)
+```
+
+#### biii. Visualize the residuals of both regression models (raw and log-transformed):
+
+- (biii-1). density plots of residuals
+
+
+```{r}
+regr_wt.df <- data.frame(residual = regr_wt$residuals)
+regr_wt_log.df <- data.frame(residual = regr_wt_log$residuals)
+
+resplot1 <- ggplot(regr_wt.df, aes(x=residual)) + 
+    geom_density()+
+    geom_vline(aes(xintercept=mean(residual)),color="black", linetype="dashed", size=1)+
+    labs(title  = 'Residual Before Log Transform')
+
+resplot2 <- ggplot(regr_wt_log.df, aes(x=residual)) +
+  geom_density()+geom_vline(aes(xintercept=mean(residual)),
+            color="black", linetype="dashed", size=1)+labs(title  = 'Residual after Log Transform')
+
+# Plot them together
+grid.arrange(resplot1, resplot2,ncol = 2, nrow = 1)
+```
+
+
+
+- (biii-2). Scatterplot of log.weight. vs. residuals
+
+
+```{r}
+before_log <- regr_wt %>% ggplot( aes(x = weight, y = regr_wt$residuals)) + 
+    geom_smooth(method = "lm", se = TRUE, colour="red", size=1)  +
+    geom_point(colour = "blue", size = 3, alpha = 0.4) + 
+    ggtitle('Scatterplot of weight. vs. residuals')
+
+after_log <- regr_wt_log %>% ggplot( aes(x = log.weight., y = regr_wt_log$residuals)) + 
+    geom_smooth(method = "lm", se = TRUE, colour="red", size=1)  +
+    geom_point(colour = "red", size = 3, alpha = 0.4) + 
+    ggtitle('Scatterplot of log.weight. vs. residuals')
+
+# Plot them together
+grid.arrange(before_log, after_log,ncol = 2, nrow = 1)    
+
+```
+
+
+#### biv. Which regression produces better distributed residuals for the assumptions of regression?
+
+
+
+```{r}
+# Before Log
+sprintf("Before Log:")
+shapiro.test(regr_wt$residuals)
+
+# After Log
+sprintf("After Log:" )
+shapiro.test(regr_wt_log$residuals)
+```
+The p-value of the regr_wt$residuals is far smaller than the one after log. 
+Hence, after the log transform, the regression produces better distributed residuals for the assumptions of regression.
+
+
+
+#### bv. How would you interpret the slope of log.weight. vs log.mpg. in simple words?
+
+```{r}
+regr_wt_log$coefficients
+```
+
+- Ans:
+
+1 percentage change in weight will leads to  -1.057506% change in weight mpg.
+
+
+```{r}
+regr_wt_log$coefficients
+
+```
+
+
+#### c. Let’s examine the 95% confidence interval of the slope of log.weight. vs. log.mpg.
+
+
+#### ci. Create a bootstrapped confidence interval
+
+```{r}
+plot(log(auto$weight), log(auto$mpg), col=NA, pch=19)
+
+# Function for single resampled regression line
+boot_regr<-function(model, dataset) {
+  boot_index<-sample(1:nrow(dataset), replace=TRUE)
+  data_boot<-dataset[boot_index,]
+  regr_boot<-lm(model, data=data_boot)
+  abline(regr_boot,lwd=1, col=rgb(0.7, 0.7, 0.7, 0.5))
+  regr_boot$coefficients
+}
+
+coeffs<-replicate(300,boot_regr(log(mpg) ~ log(weight), auto))
+
+#Plot points and regression line
+points(log(auto$weight), log(auto$mpg), col="blue",pch=19)
+abline(a=mean(coeffs["(Intercept)",]),b=mean(coeffs["log(weight)",]),lwd=2)
+
+#Confidence interval values 
+conf_int <- quantile(coeffs["log(weight)",], c(0.025, 0.975))
+
+#Plot confidence interval of coefficient 
+plot(density(coeffs["log(weight)",]),xlim=c(-1.2, -1), 
+     main='density plot of log weight coefficient CI', lwd=2)
+abline(v=quantile(coeffs["log(weight)",], c(0.025, 0.975)), col='red')
+text(conf_int[1],3, "-1.1059")
+text(conf_int[2],3, "-1.007817")
+```
+
+
+
+#### cii. Verify your results with a confidence interval using traditional statistics
+(i.e., estimate of coefficient and its standard error from lm() results)
+
+```{r}
+hp_regr_log<-lm(log(mpg) ~ log(weight), auto)
+confint(hp_regr_log, ,level=.95)
+print('---------------------')
+
+conf_int
+```
+They are pretty close.
+
+----------------------------------
+
+#### Question 2) Let’s tackle multicollinearity next. Consider the regression model:
+
+
+
+```{r}
+regr_log <- lm(log.mpg. ~ log.cylinders. + log.displacement. + log.horsepower. +
+                              log.weight. + log.acceleration. + model_year +
+                              factor(origin), data=cars_log)
+
+
+```
+
+#### a. Using regression and R2, compute the VIF of log.weight. using the approach shown in class
+
+
+```{r}
+weight_regr<-lm(log.weight. ~ log.cylinders. + log.displacement. + log.horsepower. + log.acceleration. +model_year+factor(origin),data=cars_log,na.action=na.exclude)
+
+r2_weight <-summary(weight_regr)$r.squared
+vif_weight<-1 / (1-r2_weight)
+sqrt(vif_weight)
+```
+
+
+#### b. Let’s try a procedure called Stepwise VIF Selection to remove highly collinear predictors. 
+
+
+Start by Installing the ‘car’ package in RStudio -- it has a function called vif() 
+(note: CAR package stands for Companion to Applied Regression -- it isn’t about cars!)
+
+
+
+
+#### bi. Use vif(regr_log) to compute VIF of the all the independent variables
+
+
+```{r}
+vif(regr_log)
+```
+
+#### bii. Eliminate from your model the single independent variable with the largest VIF score that is also greater than 5
+
+Eliminate log.displacement.
+
+```{r}
+
+bii = subset(cars_log, select = -c(log.displacement.) )
+regr_log_bii <- lm(log.mpg. ~ log.cylinders.+ log.horsepower. +
+                              log.weight. + log.acceleration. + model_year +
+                              factor(origin), data=bii)
+
+vif(regr_log_bii)
+```
+
+
+#### biii. Repeat steps (i) and (ii) until no more independent variables have VIF scores above 5
+
+
+```{r}
+
+# remove Horse Power
+bii = subset(cars_log, select = -c(log.horsepower.) )
+regr_log_bii2 <- lm(log.mpg. ~ log.cylinders.+ log.weight. + log.acceleration. + model_year + factor(origin), data=bii,na.action=na.omit)
+
+# remove log.cylinders
+bii = subset(cars_log, select = -c(log.cylinders.) )
+regr_log_bii3 <- lm(log.mpg. ~log.weight. + log.acceleration. + model_year + factor(origin), data=bii,na.action=na.omit)
+
+
+vif(regr_log_bii3)
+```
+
+#### biv. Report the final regression model and its summary statistics
+
+```{r}
+regr_log_bii3
+```
+
+#### c. Using stepwise VIF selection, have we lost any variables that were previously significant?  
+
+If so, how much did we hurt our explanation by dropping those variables? (hint: look at model fit)
+
+
+yes. Ex. We lost horsepower.
+
+```{r}
+origi_r <- summary(regr_log )$r.squared
+After_dropping_r <- summary(regr_log_bii3)$r.squared
+ac <- abs(After_dropping_r- origi_r)*100
+sprintf("It decrease our explanation approximately %.3f percentage",ac)
+
+```
+
+#### d. From only the formula for VIF, try deducing/deriving the following:
+
+
+#### di. If an independent variable has no correlation with other independent variables, what would its VIF score be? 
+
+- Ans:
+
+VIF = 1. Because vif = 1/ (1-r.square). If independent variable has no correlation, r square equal to zero. Then vif =1.
+
+
+#### dii. Given a regression with only two independent variables (X1 and X2), how correlated would X1 and X2 have to be, to get VIF scores of 5 or higher? To get VIF scores of 10 or higher?
+
+- Ans:
+
+As r square >= 0.8, the VIF >=5
+
+As r square >= 0.9, the VIF >=10
+
+
+####  Question 3) Might the relationship of weight on mpg be different for cars from different origins? 
+Let’s try visualizing this. First, plot all the weights, using different colors and symbols for the three origins:
+
+
+a. Let’s add three separate regression lines on the scatterplot, one for each of the origins:
+Here’s one for the US to get you started:
+
+
+```{r}
+origin_colors = c("blue", "darkgreen", "red")
+# plot(cars_log$log.weight., cars_log$log.mpg., pch= 16, col=origin_colors[origin])
+with(cars_log, plot(log.weight., log.mpg., pch=16, col=origin_colors[origin]))
+
+```
+#### b. [not graded] Do cars from different origins appear to have different weight vs. mpg relationships?
+We will investigate these relationships more in class!
+
+Ans: Note that Origin of car (1. American, 2. European, 3. Japanese).
+
+```{r}
+
+ggplot(auto, aes(x = weight, y = mpg)) + geom_point(aes(color = origin))+
+    geom_smooth(method="lm", mapping=aes(x=weight,y= mpg ,color = origin), se=FALSE)
+```
+
+- *Ans:*
+
+Yes. 
+
+The slope of  American car (No.1) and European's car are pretty close. However, in the scatter above, we can tell that the slope of Japanese car is steeper than the former. It indicates that each unit of weight put on  Japanese's car make the increasing of fuel consumption lesser than the American's car and EU's car.
