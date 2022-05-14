@@ -1,0 +1,270 @@
+---
+title: "HW12"
+author: '110078509'
+date: '20220508'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+```{r setup, include=FALSE} 
+#rm(list=ls()) 
+knitr::opts_chunk$set(echo = TRUE) 
+library(tidyverse) 
+library(ggplot2) 
+library(car)
+boot_mediation <- function(model1, model2, dataset) {
+boot_index <- sample(1:nrow(dataset), replace=TRUE)
+data_boot <- dataset[boot_index, ]
+regr1 <- lm(model1, data_boot)
+regr2 <- lm(model2, data_boot)
+return(regr1$coefficients[2] * regr2$coefficients[2])
+}
+```
+Create a data.frame called cars_log with log-transformed columns for mpg, weight, and acceleration
+(model_year and origin don’t have to be transformed)
+
+
+### Question 1
+
+#### a. Let’s visualize how weight might moderate the relationship between acceleration and mpg:
+
+ai. Create two subsets of your data, one for light-weight cars (less than mean weight) 
+and one for heavy cars (higher than the mean weight)
+HINT: consider carefully how you compare log weights to mean weight
+
+```{r}
+cars <- read.table("auto-data.txt", header=F, na.strings = "?")
+names(cars) <- c("mpg", "cylinders", "displacement", "horsepower", "weight", 
+                 "acceleration", "model_year", "origin", "car_name")
+
+cars_log.2 <- with(cars, data.frame(log(mpg),log(cylinders),log(displacement),log(horsepower), log(weight), log(acceleration), model_year, origin))
+
+cars_log <- with(cars, data.frame(log(mpg), log(weight), log(acceleration), model_year, origin))
+
+
+carmean<-mean(cars_log$log.weight.)
+
+light <- subset(cars_log, log.weight.<carmean, na.action=na.exclude)
+heavy <- subset(cars_log, log.weight.>carmean, na.action=na.exclude)
+```
+
+aii. Create a single scatter plot of acceleration vs. mpg, with different colors and/or shapes for light versus heavy cars
+
+
+```{r}
+with(light, plot(log.acceleration.,xlim=c(2.2,3.25) ,ylim = c(2.2,3.8), log.mpg., pch=20, col=3, main='Single Scatter Plot of Acceleration vs. MPG.'))
+
+with(heavy, points(log.acceleration., log.mpg., pch=17, col=8))
+
+legend('topright', legend=c("light", "heavy"),
+        pch=c(20,17), cex=0.85, col=c(3,8))
+
+```
+
+
+aiii. Draw two slopes of acceleration-vs-mpg over the scatter plot: 
+
+one slope for light cars and one slope for heavy cars (distinguish them by appearance)
+
+
+```{r}
+with(light, plot(log.acceleration., log.mpg.,xlim=c(2.2,3.25),ylim=c(2.2,3.8), pch=20, col=3, main='Single Scatter Plot of Acceleration vs. MPG.'))
+
+with(heavy, points(log.acceleration., log.mpg., pch=17, col=8))
+abline(lm(log.mpg. ~ log.acceleration., data=light), col=3, lwd=2)
+abline(lm(log.mpg. ~ log.acceleration., data=heavy), col=8, lwd=2, lty=2)
+
+legend('topright', legend=c("light", "heavy"), pch=c(20,17), cex=0.85,col=c(3,8))
+```
+
+#### b.	Report the full summaries of two separate regressions for light and heavy cars where
+
+- Ans: 
+
+
+```{r}
+light<-na.omit(light)
+heavy<-na.omit(heavy)
+
+print('Light:')
+light.lm <- lm(light$log.mpg.~light$log.weight.+light$log.acceleration.+light$model_year+factor(light$origin))
+summary(light.lm)
+
+print('----------------------------BLOCK----------------------------------------')
+
+print('Heavy:')
+heavy.lm <- lm(heavy$log.mpg.~heavy$log.weight.+heavy$log.acceleration.+heavy$model_year+factor(heavy$origin))
+summary(heavy.lm)
+```
+
+
+#### c.	(not graded) Using your intuition only: What do you observe about light versus heavy cars so far?
+
+- Ans: 
+
+log.acceleration. is only significant(at 0.1 significant.) in 'Light'.
+
+
+### Question 2
+
+#### a. (not graded) Between weight and acceleration ability, use your intuition and experience to state which variable might be a moderating versus independent variable, in affecting mileage.
+
+```{r}
+summary(lm(log.mpg. ~ log.weight. + log.acceleration. + model_year + factor(origin), data=cars_log))
+```
+Personally, I guessed "log.weight." could be the moderator because it's slope is steeper than the "log.acceleration."'s.
+
+For example, assuming we're testing the performance of the student adopt different learning platforms. In the example case like this , the "original academic performance" could be a strong moderator. Because the students who have a better original academic performance are more likely to have a strong learning ability. And in this case, the relationship between the "original academic performance (moderator)" & "performance after adopt learning platform (Y)"  could be highly correlative, which the slope could be steeper.
+
+#### b. Use various regression models to model the possible moderation on log.mpg.:
+
+(use log.weight., log.acceleration., model_year and origin as independent variables)
+
+bi. Report a regression without any interaction terms
+```{r}
+summary(lm(log.mpg. ~ log.weight. + log.acceleration. + model_year +factor(origin), data=cars_log))
+
+```
+
+bii. Report a regression with an interaction between weight and acceleration
+
+
+```{r}
+summary(lm(log.mpg.~log.weight.+ log.acceleration. + log.weight.*log.acceleration.+ model_year + factor(origin), data=cars_log))
+
+```
+
+biii. Report a regression with a mean-centered interaction term
+
+
+```{r}
+
+slw <- scale(cars_log$log.weight., center=TRUE, scale=FALSE)
+sla <- scale(cars_log$log.acceleration., center=TRUE, scale=FALSE)
+
+
+summary(lm(log.mpg. ~ slw + sla +model_year + factor(origin)+ slw*sla, data=cars_log ))
+
+```
+
+----
+
+biv.	Report a regression with an orthogonalized interaction term
+
+```{r}
+
+# Residuals of interaction’s regression
+
+log.weight_x_log.acceleration. <- cars_log$log.weight.*cars_log$log.acceleration.
+interaction_regr <- lm(log.weight_x_log.acceleration. ~ cars_log$log.weight.+cars_log$log.acceleration.)
+
+interaction_ortho <- interaction_regr$residuals
+#Correlation of residual
+#round(cor(cbind(dep, interaction_ortho)), 2)
+
+summary(lm(log.mpg.~ log.weight. + log.acceleration.+ model_year + factor(origin) + interaction_ortho, data=cars_log))
+```
+#### c. For each of the interaction term strategies above (raw, mean-centered, orthogonalized) what is the correlation between that interaction term and the two variables that you multiplied together?
+
+
+- Raw
+
+```{r}
+# raw
+weight_acce_raw <- cars_log$log.weight. * cars_log$log.acceleration.
+
+
+round(cor(cbind(cars_log[1:3],weight_acce_raw)), 2)
+```
+- Mean-centered
+```{r}
+# mean-centered
+mean.center = cbind(cars_log$log.mpg., slw, sla, slw*sla)
+colnames(mean.center) = c('log.mpg','scale_log.weight', 'scale_log.acceleration','interaction_term' )
+
+round(cor(mean.center), 2)
+```
+
+- Orthogonalized
+
+```{r}
+# orthogonalized
+round(cor(cbind(cars_log[1:3], interaction_ortho)), 2)
+
+```
+
+
+
+### Question 3-  Mediator
+
+
+#### a.i.	Model 1: Regress log.weight. over log.cylinders. only
+(check whether number of cylinders has a significant direct effect on weight)
+
+
+- Ans:
+
+Yes, the log.cylinders. has a significant direct effect on log.weight. (p value < 0.05)
+
+```{r}
+cars_log.2 <- with(cars, data.frame(log(mpg), log(cylinders), log(displacement), log(horsepower), log(weight), log(acceleration), model_year,factor(origin)))
+cars_log.2<-na.omit(cars_log.2)
+
+model1 <-lm(log.weight.~log.cylinders., data= cars_log.2)
+summary(model1)
+```
+
+
+
+#### aii.	Model 2: Regress log.mpg. over log.weight. and all control variables (check whether weight has a significant direct effect on mpg with other variables statistically controlled?)
+
+
+- Ans:
+
+```{r}
+
+model2 <- lm(log.mpg. ~ log.weight.+log.acceleration.+model_year + factor(factor.origin.) , data = cars_log.2)
+summary(model2)
+
+```
+
+#### b. What is the indirect effect of cylinders on mpg? (use the product of slopes between model 1 & 2)
+
+
+```{r}
+indirect_effect_mpg.cylinder <- model1$coefficients[2]*model2$coefficients[2]
+sprintf("The indirect Effect approximately equal to  %.2f", indirect_effect_mpg.cylinder)
+```
+
+
+#### c.	Let’s bootstrap for the confidence interval of the indirect effect of cylinders on mpg
+
+bi.	Bootstrap regression models 1 & 2, and compute the indirect effect each time: 
+what is its 95% CI of the indirect effect of log.cylinders. on log.mpg.?
+
+
+```{r}
+set.seed(74)
+indirect<-replicate(2000,boot_mediation(model1,model2,cars_log.2))
+quantile(indirect, probs=c(0.025, 0.975))
+```
+
+
+bii.	Show a density plot of the distribution of the 95% CI of the indirect effect
+
+```{r}
+
+plot(density(indirect),lwd=2,col="blue", main='Bootstrapping of Indirect Effect')
+abline(v=mean(indirect), lty=2, col="red", lwd=2)
+abline(v=quantile(indirect, probs=c(0.025, 0.975)), lty=2, lwd=2, col="green")
+
+```
+
+
+```{css, echo=FALSE}
+h2 {
+  font-size: 32px;
+  color: red !important;
+}
+```
