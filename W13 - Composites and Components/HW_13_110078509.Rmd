@@ -1,0 +1,274 @@
+---
+title: "HW_13"
+author: '110078509'
+date: '20220514'
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE)
+# rm(list=ls()) 
+library(tidyverse) 
+library(ggplot2) 
+# install.packages("openxlsx")
+# install.packages("devtools")
+#require(devtools)
+# 載入 openxlsx 套件
+library(openxlsx)
+library(factoextra)
+library(corrplot)
+#remove the random variable to fresh the working environment 
+
+cars <- read.table("auto-data.txt", header=F, na.strings = "?")
+names(cars) <- c("mpg", "cylinders", "displacement", "horsepower", "weight", 
+ "acceleration", "model_year", "origin", "car_name")
+
+cars_log <- with(cars,data.frame(log(mpg),log(cylinders),log(displacement),log(horsepower), log(weight), log(acceleration), model_year, origin))
+cars_log<-na.omit(cars_log)
+write.csv(cars_log,"C:\\Users\\LeoShr\\p_space\\NTHU\\BACS\\W13 - Composites and Components\\cars_log.csv", row.names = FALSE)
+
+wc<-lm(log.weight.~log.cylinders., data=cars_log)
+summary(wc)
+
+```
+### Q1
+
+#### a. Let’s analyze the principal components of the four collinear variables
+
+
+#### i.	Create a new data.frame of the four log-transformed variables with high multicollinearity
+```{r}
+engine <-  data.frame(log.mpg. = cars_log$log.mpg.,
+                      log.cylinders. =  cars_log$log.cylinders.,
+                      log.displacement. =cars_log$log.displacement.,
+                      log.horsepower. = cars_log$log.horsepower.)
+
+head(engine,3)
+```
+
+------------------------------------------------------------------------------------------------
+
+
+
+#### aii.	How much variance of the four variables is explained by their first principal component?
+(a summary of the prcomp() shows it, but try computing this from the eigenvalues alone)
+
+```{r}
+var <- eigen(cor(engine))$values
+denominator  <- sum (var)
+result_manual <- var[1]/denominator
+result_manual
+```
+- Explains:
+
+It indicates that 89.74 % variance of 4 variable provided is explained by the first component. (PC1)
+
+Plus: Demo the function of prcomp()
+```{r}
+# PCA前記得標準化
+engine_pca<- prcomp(engine,scale=T ) #相關矩陣分解
+summary(engine_pca)#方差解釋度
+```
+- First component demo by prcomp()
+
+```{r}
+prcomp.variance <- engine_pca$sdev ^2
+result_prcomp <- prcomp.variance[1]/sum(prcomp.variance)
+result_prcomp # same value as we calculate it manually
+```
+
+#### aiii.	Looking at the values and valence (positiveness/negativeness) of the first principal component’s eigenvector, what would you call the information captured by this component?
+(i.e., think what concept the first principal component captures or represents)
+
+```{r}
+engine_pca$rotation#[,1]
+cat('\n After Abs \n')
+abs(engine_pca$rotation[,1])
+```
+We can tell the ratio of 4 variable (log.mpg. etc) are pretty close after absolute. The last  of the variable have the negative std to the first princple. Therefore, it would say PCA1 seize the positive relation to the log.mpg.
+I'll called it 'Efficiency'.
+
+
+###  b.	Let’s revisit our regression analysis on cars_log:
+
+#### bi.	Store the scores of the first principal component as a new column of cars_log
+
+cars_log$new_column_name <- ...scores of PC1…
+
+```{r}
+cars_log_bi <- cars_log
+std.PC1<-as.numeric(engine_pca$x[,1])
+cars_log_bi$std.PC1 <- -std.PC1
+
+```
+
+#### bii.	Regress mpg over the column with PC1 scores (replacing cylinders, displacement, horsepower, and weight), as well as acceleration, model_year and origin
+
+
+
+```{r}
+
+summary(lm(log.mpg.~std.PC1+log.cylinders.+log.displacement.+log.acceleration.+log.horsepower.+log.weight.+model_year+factor(origin),data=cars_log_bi))
+```
+
+#### biii.	Try running the regression again over the same independent variables, but this time with everything standardized. 
+How important is this new column relative to other columns?
+
+
+```{r}
+# Standardize the features
+cars_log2 <- cars_log
+std.PC1<-as.numeric(engine_pca$x[,1])
+
+cars_log2.scale <- as.data.frame(scale(cars_log2[,c(1:7)]))
+cars_log2.scale$origin<-cars_log$origin
+cars_log2.scale$std.PC1 <- -std.PC1
+
+
+summary(lm(log.mpg.~std.PC1+log.cylinders.+log.displacement.+log.acceleration.+log.horsepower.+log.weight.+model_year+factor(origin),data=cars_log2.scale))
+```
+
+
+Explains: 
+
+The std.PC1, log.cylinders, log.displacement., log.horsepower.is significant on mpg.
+log.acceleration., log.weight.   , model_year,  origin are not significant.
+The R square = SSR/SST = 1, means it perfect fit the linear model. The reason is that we regress it with its residual (std.PC1).
+
+
+
+### Q2 Load security_questions.xlsx 
+
+
+```{r}
+df_question <- read.xlsx("security_questions.xlsx", sheet = 1)
+df_ans <- read.xlsx("security_questions.xlsx", sheet = 2)
+
+```
+
+
+##### a.	How much variance did each extracted factor explain?
+
+- The Importance of components & the variance explained each component 
+```{r}
+raw_pca<-prcomp(df_ans, scale. = T)
+summary(raw_pca)
+
+cat('\n')
+
+var_explained  <- raw_pca$sdev^2 /sum(raw_pca$sdev^2); var_explained
+
+```
+- Ans:
+
+51.7% is explained by their first principal component (PC1).
+
+8.8% is explained by their second principal component (PC2).
+
+6.3% is explained by their third principal component (PC3).
+
+etc...
+
+
+#####  b.	How many dimensions would you retain, according to the two criteria we discussed?
+
+
+- Plot scree Plot via ggplot2 for more clearification.
+
+```{r}
+
+qplot(c(1:18), var_explained) + 
+  geom_line() + 
+  xlab("Principal Component") + 
+  ylab("Variance Explained") +
+  ggtitle("Scree Plot") +
+  scale_x_continuous(breaks = seq(1, 18, by = 1)) + 
+    scale_y_continuous(breaks = seq(0, 1, by = 0.05))+
+    geom_hline(aes(yintercept=.1),  color="red", linetype="dashed")
+
+```
+
+*Ans:*
+
+I 'd select only the first one component. Because the rest of them are within 0-10% (under red dashed line).
+
+----------------------------------
+
+#### c.	(ungraded) Can you interpret what any of the principal components mean? Try guessing the meaning of the first two or three PCs looking at the PC-vs-variable matrix
+
+
+Reference: https://www.twblogs.net/a/5d419f19bd9eee517423483b
+
+- All PC versus ALL Variable
+
+```{r}
+
+var <- get_pca_var(raw_pca)
+
+corrplot(var$cos2, is.corr=FALSE)
+
+```
+*Ans:* 
+
+- The First 2 PC versus ALL Variable
+```{r}
+fviz_cos2(raw_pca, choice = "var", axes = 1:2)
+```
+
+
+```{r}
+
+fviz_pca_var(raw_pca, col.var = "cos2",
+ gradient.cols = c("00bb0c", "#00afbb", "#00676f", "#0052bb", 'black'),
+ repel = TRUE) #
+
+```
+Explain:
+
+High cos2 indicates that the features have importance effect to o the principal component. 
+
+It can be used to measure the usefulness of the questions.
+
+For the plot above, 
+
+we can tell that Q4, Q12, Q17 have strong  effect to the principal component. 
+And they were designed to ask the questions about the transaction.
+
+
+ps: 
+
+Q4 - 
+
+"This site provides me with some evidence to protect against its denial of having received a transaction from me"
+
+Q12 -
+
+"This site takes steps to make sure that the information in transit is not deleted "
+
+Q17 - 
+
+"This site provides me with some evidence to protect against its denial of having participated in a transaction after processing it "
+
+
+
+### Question 3
+
+
+#### a.	Create an oval shaped scatter plot of points that stretches in two directions – you should find that the principal component vectors point in the major and minor directions of variance (dispersion). Show this visualization.
+
+```{r}
+
+print('yes')
+```
+
+
+#### b.	Can you create a scatterplot whose principal component vectors do NOT seem to match the major directions of variance? Show this visualization.
+
+
+
+```{r}
+
+print('oh yes')
+```
