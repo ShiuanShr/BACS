@@ -1,0 +1,532 @@
+---
+title: "HW 17"
+author: '110078509'
+date: '202203'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE) 
+#rm(list=ls()) 
+library(tidyverse) 
+library(ggplot2) 
+ 
+library(rpart)
+
+# install.packages("rpart.plot")
+library(rpart.plot)
+# install.packages("Metrics")
+library(Metrics)
+```
+
+Setup: Download the data, load it in your script, and omit any rows with missing values (NAs)
+
+```{r}
+df <- read.csv('insurance.csv', header = T)
+insurance <- na.omit(df)
+str(insurance)
+```
+
+```{r}
+summary(insurance)
+
+```
+
+```{r}
+table(insurance$sex)
+table(insurance$smoker)
+table(insurance$region)
+```
+
+
+
+------------------------------------------------------------------------------------------------
+
+Question 1) Create some explanatory models to learn more about charges:
+
+
+##### a. Create an OLS regression model and report which factors are significantly related to charges
+
+
+```{r}
+ins_lm <- lm(charges ~ ., data=insurance)
+summary(ins_lm)
+```
+Ans:
+
+Age, childern, bmi, smokeyes, region southeast and southwest are significant.
+Meanwhile the rest are not which can be dropped for model improvement. 
+
+
+
+##### b. Create a decision (regression) tree with default parameters
+
+```{r}
+# insurance_model <- rpart(charges ~ age+factor(sex)+bmi +children +factor(smoker) +factor(region), data = insurance )
+insurance_model <- rpart(charges ~ age+sex+bmi +children +smoker +region, data = insurance )
+
+insurance_model
+```
+
+i. Plot a visual representation of the tree
+
+```{r}
+prp(insurance_model,         # 模型
+    faclen=0,           # 呈現的變數不要縮寫
+    fallen.leaves=TRUE, # 讓樹枝以垂直方式呈現
+    shadow.col="gray",  # 最下面的節點塗上陰影
+    # number of correct classifications / number of observations in that node
+    extra = 1
+    )  
+```
+
+
+
+ii. How deep is the tree (see nodes with “decisions” – ignore the leaves at the bottom)
+
+
+- Ans: 2 level after ingore the leafs
+
+
+iii. How many leaf groups does it suggest to bin the data into?
+
+
+- Ans: 4 groups of leaf
+
+
+iv. What is the average charges of each leaf group?
+
+
+```{r}
+count <- c(506, 468, 130,144)
+classfi <- c('Not Smoker under 43yd', 'Not Smoker above 43yd',"Smoker's BMI under 30","Smoker's BMI above 30")
+data.frame(Leaf =  classfi, count)
+```
+
+v. What conditions (decisions) describe each group?
+
+Ans: 
+
+1. Whether is a smoker or not.
+
+2. BMI < 30 or not 
+
+3. Age < 43 or not 
+
+
+----------------------------------
+
+#### Question 2) Let’s use LOOCV to se how how our models perform predictively
+
+- Split-sample Testing
+
+```{r}
+set.seed(22)
+train.index <- sample(x=1:nrow(insurance), size=ceiling(0.8*nrow(insurance) ))
+train <- insurance[train.index, ]
+test <- insurance[-train.index, ]
+
+
+```
+
+
+#### a.	What is the RMSEoos for the OLS regression model?
+
+
+
+
+
+
+
+```{r}
+mse_oos <- function(actuals, preds) {
+mean( (actuals - preds)^2 )
+}
+
+
+# Train
+OLS_model <- lm(charges ~., data = insurance )
+lm_trained <- update(OLS_model, data=train)
+# charges_actual_is <- train$charges
+# mse_is <- mean( (charges_actual_is - fitted(lm_trained))^2 )
+
+
+# Predict
+charges_predicted <- predict(lm_trained, test)
+
+
+# Test
+
+
+charges_actual <- test$charges
+pred_err <- charges_actual - charges_predicted
+mse <- mse_oos(charges_actual, charges_predicted)
+RMSE <- mse^0.5
+RMSE
+```
+
+----------------------------------
+
+#### b.	What is the RMSEoos for the decision tree model?
+
+```{r}
+
+# Method 1
+# modeling
+
+# 
+tree_model <- rpart(charges   ~ ., data = train) 
+#Not: 'charges   ~ .'可以用OLS_model取代
+
+# Predict
+
+pred_base <- predict(object=tree_model,
+                newdata = test)
+
+charges_actual <- test$charges
+pred_err <- charges_actual - pred_base
+mse <-mse_oos(charges_actual, pred_base)
+RMSE <- mse^0.5
+RMSE
+
+
+# Method 2
+rmse_base <- rmse(actual=charges_actual ,  predicted = pred_base )
+```
+
+
+
+Question 3) Let’s see if bagging helps our models
+
+For bagging and boosting, we will only use split-sample testing to save time: partition the data to create training and test sets using an 80:20 split. Use the regression model and decision tree you created in Question 1 for bagging and boosting.
+
+----------------------------------
+
+
+- Split-sample Testing
+
+```{r}
+set.seed(22) # 此處必須設定seed
+train.index <- sample(x=1:nrow(insurance), size=ceiling(0.8*nrow(insurance) ))
+Train <- insurance[train.index, ]
+Test <- insurance[-train.index, ]
+
+```
+
+----------------------------------
+
+#### a.	Write bagged_learn(…) and bagged_predict(…) functions using the hints in the class notes and help from your classmates on Teams. Feel free to share your code generously on Teams to get feedback, or ask others for help.
+
+
+Bagging = Bootstrapping + Aggregation.
+Therefore, we need to 
+
+1. Get a bootstrapped (resampled w/ replacement) dataset
+
+2. Return a retrained (updated) model
+
+
+
+```{r}
+bagged_learn <- function(model, dataset, model_type, b=100 , drop_out = 0.4) {
+
+    lapply(1:b, \(i) {
+        Index <- sample(x=1:nrow(dataset), size=ceiling(0.8*nrow(dataset)), replace = T)
+        Train=dataset[Index,]
+
+        if (model_type == "OLS" ){
+          Model <- update(model, data= Train)
+        }
+        
+        else if (model_type == "RF" ){
+          # Need rpart tree based model as input
+          # Implement Random Forest with 0.4 drop out rate
+          # it only works as dependent variable is continuous variable
+          Index_row=sample(nrow(Train),round(nrow(Train)* (1-drop_out)))
+          Train<-Train[Index_row,]
+          Model <- update(model, data= Train)
+        }
+        
+        else if (model_type == "DT" ){
+          #Model<-rpart(model,data=Train ,method='anova')
+          Model <- update(model, data= Train)
+        }
+        else{
+          print("Warming: model type only allow OLS(Linear LM), RF (RandomForest), DT (DecisionTree)")
+          break
+        }
+        })
+}
+
+
+bagged_predict <- function(bagged_models, Testdata) {
+    predictions <- lapply(bagged_models, \(x) predict(x, Testdata))
+    df <- as.data.frame(predictions) |> apply(1, mean) |>as.data.frame()
+    rownames(df) <- NULL
+    colnames(df) <- NULL
+    df
+}
+
+```
+
+
+#### b.	What is the RMSEoos for the bagged OLS regression?
+
+- Bagged_learn for regression model
+
+```{r}
+model_list <- bagged_learn(OLS_model,data = insurance, b =100, model_type = "OLS")
+bagged_prediction <- bagged_predict(model_list, Test)
+# head(bagged_prediction)
+
+actual <- test$charges
+RMSoos_OLS <- (mean((unlist(bagged_prediction)- actual)^2))^.5
+RMSoos_OLS
+```
+#### c.	What is the RMSEoos for the bagged decision tree?
+
+- Bagged_learn for Decision Tree Model
+
+```{r}
+
+model_list <- bagged_learn(tree_model,data = insurance, b =100, model_type = 'DT')
+bagged_prediction <- bagged_predict(model_list, Test)
+actual <- test$charges
+RMSoos_OLS <- mean((unlist(bagged_prediction)- actual)^2)^.5
+RMSoos_OLS
+```
+
+Question 3) Let’s see if boosting helps our models. You can use a learning rate of 0.1 and adjust it if you find a better rate.
+
+
+a.	Write boosted_learn(…) and boosted_predict(…) functions using the hints in the class notes and help from your classmates on Teams. Feel free to share your code generously on Teams to get feedback, or ask others for help.
+
+```{r}
+boost_learn <- function(model, dataset, n=100, rate=0.1) {
+predictors <- dataset[, c('age', 'sex', 'bmi', 'children','smoker','region')] # get data frame of only predictor variables
+# Initialize residuals and models
+res <- dataset[, c("charges")] # get vector of actuals to start
+models <- list()
+
+for (i in 1:n) {
+    this_model <- update(model, data = cbind(charges=res, predictors))
+    # y_hat <- fitted(predictors, res)
+    # y_hat
+    res <- res - rate*this_model$y
+    models[[i]] <- this_model
+    }
+list(models=models, rate=rate)
+}
+
+```
+
+```{r}
+boost_predict <- function(boosted_learning, new_data) {
+  boosted_models <- boosted_learning$models
+  rate <-  boosted_learning$rate
+  n <- nrow(new_data)
+  
+  # get predictions of new_data from each model
+  predictions <- lapply(boosted_models, \(x) predict(x, new_data)) 
+  pred_frame <- as.data.frame(predictions) |> unname()
+  df <- apply(as.data.frame(predictions),1,mean)|>as.data.frame()
+  rownames(df) <- NULL
+  colnames(df) <- NULL # apply a sum over the columns of predictions, weighted by learning rate
+  df
+}
+
+```
+b.	What is the RMSEoos for the boosted OLS regression?
+
+```{r} 
+OLS_model <- lm(charges ~., data = insurance )
+
+model_list <- boost_learn(model = OLS_model,data = insurance, n=100, rate=0.1)
+Boost_prediction <- boost_predict(model_list, Test)
+actual <- Test$charges
+RMSoos_OLS <- mean((unlist(Boost_prediction)- actual)^2)^.5
+RMSoos_OLS
+
+```
+c.	What is the RMSEoos for the boosted decision tree?
+
+```{r}
+ins_lm
+
+```
+
+```{r}
+Model <- bagged_learn(model = ins_lm, dataset = insurance)
+# bagged_predict(Model,test)
+```
+
+----------------------------------
+
+#### b.	What is the RMSEoos for the bagged OLS regression?
+
+
+```{r}
+
+```
+
+
+----------------------------------
+
+#### c.	What is the RMSEoos for the bagged decision tree?
+
+
+```{r}
+
+```
+
+----------------------------------
+#####
+
+Question 4) Let’s engineer the best predictive decision trees. Let’s repeat the bagging and boosting decision tree several times to see what kind of base tree helps us learn the fastest. Report the RMSEoos at each step.
+
+
+a.	Repeat the bagging of the decision tree, using a base tree of maximum depth 1, 2, … n while the RMSEoos keeps dropping; stop when the RMSEoos has started increasing again.
+
+
+```{r}
+
+```
+
+
+
+b.	Repeat the boosting of the decision tree, using a base tree of maximum depth 1, 2, … n while the RMSEoos keeps dropping; stop when the RMSEoos has started increasing again.
+
+
+```{r}
+
+```
+
+#####  
+
+----------------------------------
+
+#####  
+
+
+```{r}
+
+
+```
+
+*Ans:*
+
+
+
+----------------------------------
+
+#### 
+
+```{r}
+
+```
+*Ans:* 
+
+
+----------------------------------
+
+#### 
+
+*Ans:*
+
+
+----------------------------------
+
+##### 
+
+*Ans:*
+
+
+
+------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------
+
+
+#### 
+```{r}
+
+```
+----------------------------------
+
+##### 
+
+```{r}
+
+```
+----------------------------------
+
+##### 
+
+
+```{r}
+
+```
+
+*Ans*: 
+
+
+
+----------------------------------
+
+##### 
+
+
+
+```{r}
+
+```
+*Ans: * 
+
+
+
+----------------------------------
+
+#####
+
+```{r}
+
+```
+*Explain:*
+
+
+
+
+------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------
+
+#####
+
+*Ans. *
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+```
+
+
+
