@@ -1,0 +1,515 @@
+---
+title: "EEsemble"
+author: '110078509'
+date: '20220612'
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE) 
+#rm(list=ls()) 
+library(tidyverse) 
+library(ggplot2) 
+ 
+library(rpart)
+#install.packages('partykit')
+library(partykit)
+# install.packages("rpart.plot")
+library(rpart.plot)
+# install.packages("Metrics")
+library(Metrics)
+
+library(tidyverse) 
+library(ggplot2) 
+# install.packages("seminr")
+library(seminr)
+require(glue)
+# Y
+# install.packages("DiagrammeR")
+require(DiagrammeR)
+```
+
+Setup: Download the data, load it in your script, and omit any rows with missing values (NAs)
+
+```{r}
+df <- read.csv('insurance.csv', header = T)
+insurance <- na.omit(df)
+str(insurance)
+```
+
+```{r}
+k_fold_mse <- function(model, dataset, outcome, k=10) {
+  shuffled_indicies <- sample(1:nrow(dataset))
+  dataset <- dataset[shuffled_indicies,]
+  fold_pred_errors <- sapply(1:k, \(kth) {
+    fold_i_pe(kth, k, model, dataset, outcome)
+})
+  pred_errors <- unlist(fold_pred_errors)
+  mse <- \(errs) mean(errs^2)
+  c(is = mse(residuals(model)), oos = mse(pred_errors))
+}
+
+fold_i_pe <- function(i, k, model, dataset, outcome) {
+  folds <- cut(1:nrow(dataset), breaks=k, labels=FALSE)
+  test_indices <- which(folds==i)
+  test_set <- dataset[test_indices, ]
+  train_set <- dataset[-test_indices, ]
+  
+  trained_model <- update(model, data = train_set)
+  predictions <- predict(trained_model, test_set)
+  dataset[test_indices, outcome] - predictions 
+  
+}
+
+```
+
+
+
+------------------------------------------------------------------------------------------------
+
+Question 1) Create some explanatory models to learn more about charges:
+
+
+##### a. Create an OLS regression model and report which factors are significantly related to charges
+
+
+```{r}
+ins_lm <- lm(charges ~ ., data=insurance)
+summary(ins_lm)
+```
+Ans:
+
+Age, childern, bmi, smokeyes, region southeast and southwest are significant.
+Meanwhile the rest are not which can be dropped for model improvement. 
+
+
+
+##### b. Create a decision (regression) tree with default parameters
+
+```{r}
+
+tree_model <- rpart(charges ~ ., data = insurance )
+
+tree_model
+```
+
+i. Plot a visual representation of the tree
+
+```{r}
+# Method 1
+prp(tree_model,         # 模型
+    faclen=0,           # 呈現的變數不要縮寫
+    fallen.leaves=TRUE, # 讓樹枝以垂直方式呈現
+    shadow.col="gray",  # 最下面的節點塗上陰影
+    # number of correct classifications / number of observations in that node
+    extra = 1
+    )  
+
+
+# Method 2
+rpart.plot(tree_model,
+           # extra = 104, # show fitted class, probs, percentages (it;s for classification model)
+           box.palette = "GnBu",  # color scheme
+           branch.lty = 3,        # dotted branch lines
+           shadow.col = "gray",   # shadows under the node boxes
+           nn = TRUE              #  display the node numbers
+           )
+
+# Method 3
+
+plot(as.party(tree_model))
+
+
+```
+
+
+
+ii. How deep is the tree (see nodes with “decisions” – ignore the leaves at the bottom)
+
+
+- Ans: 2 level after ingore the leafs
+
+
+iii. How many leaf groups does it suggest to bin the data into?
+
+
+- Ans: 4 groups of leaf
+
+
+iv. What is the average charges of each leaf group?
+
+Plz scroll down to the part of Node number 4-7
+
+```{r}
+summary(tree_model)
+
+```
+
+
+v. What conditions (decisions) describe each group?
+
+Ans: 
+
+1. Whether is a smoker or not.
+
+2. BMI < 30 or not 
+
+3. Age < 43 or not 
+
+
+----------------------------------
+
+#### Question 2) Let’s use LOOCV to se how how our models perform predictively
+
+- Split-sample Testing
+
+```{r}
+set.seed(22)
+train.index <- sample(x=1:nrow(insurance), size=ceiling(0.8*nrow(insurance) ))
+train <- insurance[train.index, ]
+test <- insurance[-train.index, ]
+charges_actual <- test$charges
+```
+
+
+#### a.	What is the RMSEoos for the OLS regression model?
+
+
+```{r}
+# Train
+OLS_model <- lm(charges ~., data = insurance )
+lm_trained <- update(OLS_model, data=train)
+
+
+# Predict
+preds <- predict(lm_trained, test)
+
+
+# Test
+RMSEoos <- function(actuals, preds) {
+  (mean( (actuals - preds)^2 ))^0.5
+  }
+# one sample RMSE
+RMSE_OLS <- RMSEoos(charges_actual, preds)
+cat('one sample RMSE:',RMSE_OLS, '\n\n')
+
+# K-fold (LOOCV) RMSE
+MSE <- k_fold_mse(lm_trained, insurance, "charges", k = 1000)
+RMSE <- MSE^0.5
+
+cat('K-fold (LOOCV) RMSE:\n is        oos\n',RMSE, '\n')
+```
+
+----------------------------------
+
+#### b.	What is the RMSEoos for the decision tree model?
+
+```{r}
+
+preds <- predict(tree_model, test)
+RMSE_tree <- RMSEoos(charges_actual, preds)
+cat('one sample RMSE:',RMSE_tree, '\n\n')
+
+# K-fold (LOOCV) RMSE
+MSE <- k_fold_mse(tree_model, insurance, "charges", k = 1000)
+RMSE <- MSE^0.5
+
+cat('K-fold (LOOCV) RMSE:\n is        oos\n',RMSE, '\n')
+```
+
+
+For bagging and boosting, we will only use split-sample testing to save time: partition the data to create training and test sets using an 80:20 split. Use the regression model and decision tree you created in Question 1 for bagging and boosting.
+
+
+
+Question 3) How bagging helps our models
+
+
+
+#### a.	Write bagged_learn(…) and bagged_predict(…) functions using the hints in the class notes and help from your classmates on Teams. Feel free to share your code generously on Teams to get feedback, or ask others for help.
+
+
+Bagging = Bootstrapping + Aggregation.
+Therefore, we need to 
+
+1. Get a bootstrapped (resampled w/ replacement) dataset
+
+2. Return a retrained (updated) model
+
+
+
+```{r}
+bagged_learn <- function(model, dataset, model_type, b=100 , drop_out = 0.4) {
+
+    lapply(1:b, \(i) {
+        Index <- sample(x=1:nrow(dataset), size=ceiling(0.8*nrow(dataset)), replace = T)
+        Train=dataset[Index,]
+
+        if (model_type == "OLS" ){
+          Model <- update(model, data= Train)
+        }
+        
+        else if (model_type == "RF" ){
+          # Need rpart tree based model as input
+          # it only works as dependent variable is continuous variable
+          Index_row=sample(nrow(Train),round(nrow(Train)* (1-drop_out)))
+          Train<-Train[Index_row,]
+          Model <- update(model, data= Train)
+        }
+        
+        else if (model_type == "DT" ){
+          #Model<-rpart(model,data=Train ,method='anova')
+          Model <- update(model, data= Train)
+        }
+        else{
+          print("Warming: model type only allow OLS(Linear LM), RF (RandomForest), DT (DecisionTree)")
+          break
+        }
+        })
+}
+
+
+bagged_predict <- function(bagged_models, new_data) {
+    predictions <- lapply(bagged_models, \(x) predict(x, new_data))
+    as.data.frame(predictions) |> apply(1, mean)
+}
+```
+
+
+#### b.	What is the RMSEoos for the bagged OLS regression?
+
+- Bagged_learn for regression model
+
+```{r}
+model_list <- bagged_learn(OLS_model,data = insurance, b =100, model_type = "OLS")
+
+bagged_pred <- unlist(bagged_predict(model_list, test))
+
+preds <- predict(tree_model, test)
+RMSoos_OLS <- RMSEoos(charges_actual, bagged_pred)
+
+RMSoos_OLS
+
+# mine [1] 6175.716
+
+```
+#### c.	What is the RMSEoos for the bagged decision tree?
+
+- Bagged_learn for Decision Tree Model
+
+```{r}
+model_list <- bagged_learn(tree_model,data = insurance, b =100, model_type = 'DT')
+bagged_pred <- unlist(bagged_predict(model_list, test))
+RMSoos_Tree <- RMSEoos(charges_actual, bagged_pred)
+RMSoos_Tree
+
+```
+
+Question 3) How boosting helps our models. 
+
+
+a.	Write boosted_learn(…) and boosted_predict(…) functions using the hints in the class notes and help from your classmates on Teams. Feel free to share your code generously on Teams to get feedback, or ask others for help.
+
+```{r}
+boost_learn <- function(model, dataset, outcome, n=100, rate=0.1) {
+    # get data frame of only predictor variable
+    predictors <- dataset[, colnames(dataset)!= outcome] 
+    res <- dataset[, colnames(dataset) == outcome] 
+    models <- list()
+    
+    for (i in 1:n) {
+        this_model <- update(model, data = cbind(charges=res, predictors))
+        # update residual with learning rate
+        res <- res - rate*predict(this_model) # The fitted() can not be apply to rpart
+        # model storage
+        models[[i]] <- this_model
+    }
+    list(models=models, rate=rate)
+}
+
+
+boost_predict <- function(boosted_learning, new_data) {
+  boosted_models <- boosted_learning$models
+  rate <-  boosted_learning$rate
+  
+  # get predictions of new_data from each model
+  predictions <- lapply(1:length(boosted_models), \(i)
+    rate*predict((boosted_models[[i]]), new_data)
+    )
+  pred_frame <- as.data.frame(predictions) |> unname()
+  # apply a sum over the columns of predictions, weighted by learning rate
+  apply(pred_frame,1,sum)
+}
+
+
+```
+
+b.	What is the RMSEoos for the boosted OLS regression?
+
+```{r} 
+set.seed(110078509)
+model <- boost_learn(lm_trained,train,"charges", n=100, rate=0.1) 
+
+pred <- model|> boost_predict(test) 
+RMSEoos(charges_actual , pred )
+
+```
+c.	What is the RMSEoos for the boosted decision tree?
+
+```{r}
+
+boost_prediction <- boost_learn(tree_model,train,"charges",  n=100, rate=0.1) |> boost_predict(test) 
+
+RMSEoos(charges_actual , boost_prediction )
+
+
+```
+
+
+
+Question 4) Let’s engineer the best predictive decision trees. Let’s repeat the bagging and boosting decision tree several times to see what kind of base tree helps us learn the fastest. Report the RMSEoos at each step.
+
+
+a.	Repeat the bagging of the decision tree, using a base tree of maximum depth 1, 2, … n while the RMSEoos keeps dropping; stop when the RMSEoos has started increasing again.
+
+
+```{r}
+# ls <- c()
+# for (i in 1:5){
+#   old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth = i)
+#   set.seed(110078509)
+#   preds <- bagged_learn(model = old_tree_stump,dataset =  train,model_type = 'DT' , b = 100) |> bagged_predict(test)
+#   RMSE_this <- RMSEoos(charges_actual, preds)
+#   
+#   ls <- append(ls,RMSE_this)
+# }
+# 
+# # 
+# names <- c(multi_items(" Depth-", 1:5))
+# cat(names, '\n' ,ls )
+```
+
+
+```{r}
+ls <- c()
+
+old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth = 1)
+set.seed(110078509)
+preds <- bagged_learn(model = old_tree_stump,dataset =  train,model_type = 'DT' , b = 100) |> bagged_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds)
+
+ls <- append(ls,RMSE_this)
+old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth = 2)
+set.seed(110078509)
+preds <- bagged_learn(model = old_tree_stump,dataset =  train,model_type = 'DT' , b = 100) |> bagged_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds)
+
+ls <- append(ls,RMSE_this)
+
+
+old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth = 3)
+set.seed(110078509)
+preds <- bagged_learn(model = old_tree_stump,dataset =  train,model_type = 'DT' , b = 100) |> bagged_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds)
+ls <- append(ls,RMSE_this)
+
+
+old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth = 4)
+set.seed(110078509)
+preds <- bagged_learn(model = old_tree_stump,dataset =  train,model_type = 'DT' , b = 100) |> bagged_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds)
+
+ls <- append(ls,RMSE_this)
+
+
+old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth = 5)
+set.seed(110078509)
+preds <- bagged_learn(model = old_tree_stump,dataset =  train,model_type = 'DT' , b = 100) |> bagged_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds)
+
+ls <- append(ls,RMSE_this)
+
+names <- c(multi_items(" Depth-", 1:5))
+cat(names, '\n' ,ls )
+
+```
+
+```{r}
+# for (i in 1:5){
+#   old_tree_stump <- rpart(charges~., train, cp = 0,  control = list(maxdepth = i) )
+#   set.seed(110078509)
+#   preds <- boost_learn(old_tree_stump, train, 'charges', n=100, rate=0.1) |> boost_predict(test)
+#   RMSE_this <- RMSEoos(charges_actual, preds)
+#   #ls <- append(ls,RMSE_this)
+#   ls[i] <- as.numeric(RMSE_this)
+# }
+```
+
+b.	Repeat the boosting of the decision tree, using a base tree of maximum depth 1, 2, … n while the RMSEoos keeps dropping; stop when the RMSEoos has started increasing again.
+
+
+```{r}
+ls <- c()
+
+old_tree_stump <- rpart(charges~., train, cp = 0,  maxdepth = 1 )
+set.seed(110078509)
+preds_i <- boost_learn(old_tree_stump, train, 'charges', n=100, rate=0.1) |> boost_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds_i)
+
+ls <- append(ls,RMSE_this)
+
+old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth =  2 )
+set.seed(110078509)
+preds_i <- boost_learn(old_tree_stump, train, 'charges', n=100, rate=0.1) |> boost_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds_i)
+
+ls <- append(ls,RMSE_this)
+
+old_tree_stump <- rpart(charges~., train, cp = 0, maxdepth =  3)
+set.seed(110078509)
+preds_i <- boost_learn(old_tree_stump, train, 'charges', n=100, rate=0.1) |> boost_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds_i)
+
+ls <- append(ls,RMSE_this)
+
+old_tree_stump <- rpart(charges~., train, cp = 0,  maxdepth =   4)
+set.seed(110078509)
+preds_i <- boost_learn(old_tree_stump, train, 'charges', n=100, rate=0.1) |> boost_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds_i)
+
+ls <- append(ls,RMSE_this)
+
+old_tree_stump <- rpart(charges~., train, cp = 0,  maxdepth =  5)
+set.seed(110078509)
+preds_i <- boost_learn(old_tree_stump, train, 'charges', n=100, rate=0.1) |> boost_predict(test)
+RMSE_this <- RMSEoos(charges_actual, preds_i)
+
+ls <- append(ls,RMSE_this)
+
+
+names <- c(multi_items(" Depth-", 1:5))
+cat(names, '\n' ,ls )
+
+
+
+# ls <- c()
+# for (i in 1:5){
+#   print(i)
+#   old_tree_stump <- rpart(charges~., train, cp = 0,  control = list(maxdepth = i) )
+#   set.seed(110078509)
+#   preds_i <- boost_learn(old_tree_stump, train, 'charges', n=100, rate=0.1) |> boost_predict(test)
+#   RMSE_this <- RMSEoos(charges_actual, preds_i)
+#   print(RMSE_this)
+#   print(class(RMSE_this))
+#   #ls <- append(ls,RMSE_this)
+# }
+# 
+# names <- c(multi_items(" Depth-", 1:5))
+# cat(names, '\n' ,ls )
+```
+
+
+
+
